@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Workshop 2026 - Acceso Exclusivo</title>
+    <style>
+        /* --- VARIABLES Y RESET --- */
+        :root {
+            --magenta: #D9027D;
+            --magenta-dark: #9E005C;
+            --turquoise: #00C4B4;
+            --turquoise-dark: #008F82;
+            --white: #ffffff;
+            --bg-light: #f4f7f6;
+            --text-dark: #333333;
+            --shadow: 0 4px 15px rgba(0,0,0,0.1);
+            --radius: 12px;
+            --transition: all 0.3s ease;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-light);
+            color: var(--text-dark);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* --- UTILIDADES --- */
+        .hidden { display: none !important; }
+        .fade-in { animation: fadeIn 0.5s ease-in-out; }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* --- NOTIFICACIONES --- */
+        #toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 2000;
+        }
+        .toast {
+            background: var(--white);
+            padding: 15px 25px;
+            border-radius: var(--radius);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            border-left: 5px solid var(--magenta);
+            margin-bottom: 10px;
+            opacity: 0;
+            animation: slideIn 0.3s forwards;
+        }
+        @keyframes slideIn { to { opacity: 1; } }
+
+        /* --- LOGIN --- */
+        #login-screen {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(135deg, var(--magenta), var(--turquoise));
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        .login-card {
+            background: var(--white);
+            padding: 40px;
+            border-radius: 20px;
+            text-align: center;
+            max-width: 400px;
+            width: 90%;
+        }
+        .login-card h1 { color: var(--magenta); margin-bottom: 20px; font-size: 2rem; }
+        .input-group { margin-bottom: 20px; text-align: left; }
+        .input-group label { display: block; margin-bottom: 8px; font-weight: bold; color: var(--turquoise-dark); }
+        .input-group input {
+            width: 100%; padding: 12px; border: 2px solid #ddd; border-radius: 8px;
+        }
+        .btn-login {
+            width: 100%; padding: 12px; background: var(--magenta); color: white;
+            border: none; border-radius: 8px; cursor: pointer; font-weight: bold;
+        }
+        .btn-login:hover { background: var(--magenta-dark); }
+
+        /* --- HEADER & NAV --- */
+        header {
+            background: var(--white); padding: 20px 5%; box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .logo-area h2 {
+            background: linear-gradient(90deg, var(--magenta), var(--turquoise));
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            font-weight: 800;
+        }
+        
+        nav {
+            background: var(--white); padding: 0 5%; border-bottom: 1px solid #eee;
+            overflow-x: auto; white-space: nowrap;
+        }
+        .tabs-container { display: flex; gap: 20px; }
+        .tab-btn {
+            background: none; border: none; padding: 20px 10px;
+            font-weight: 600; color: #888; cursor: pointer;
+            display: flex; align-items: center; gap: 8px;
+            position: relative; transition: var(--transition);
+        }
+        .tab-btn svg { width: 20px; height: 20px; fill: currentColor; }
+        .tab-btn.active { color: var(--magenta); }
+        .tab-btn.active::after {
+            content: ''; position: absolute; bottom: 0; left: 0; width: 100%; height: 4px;
+            background: var(--magenta);
+        }
+
+        /* --- MAIN CONTENT --- */
+        main {
+            padding: 40px 5%; max-width: 1400px; margin: 0 auto; width: 100%; flex: 1;
+        }
+        .section-content { display: none; }
+        .section-content.active {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 25px;
+        }
+
+        /* --- CARDS --- */
+        .card {
+            background: var(--white); border-radius: var(--radius);
+            box-shadow: var(--shadow); overflow: hidden;
+            transition: var(--transition); cursor: pointer;
+            display: flex; flex-direction: column; height: 100%;
+        }
+        .card:hover { transform: translateY(-5px); }
+        .card-img { width: 100%; height: 200px; object-fit: cover; border-bottom: 3px solid var(--turquoise); }
+        .card-body { padding: 20px; flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; }
+        .card-icon { font-size: 2rem; margin-bottom: 15px; color: var(--magenta); }
+        .pdf-card { border: 2px dashed var(--turquoise); background: #f0fdfc; }
+        .btn-download {
+            background: var(--turquoise); color: white; padding: 10px 20px;
+            border-radius: 20px; text-decoration: none; font-weight: bold; margin-top: 10px; display: inline-block;
+        }
+
+        /* --- MODALS --- */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.85); z-index: 2000;
+            display: flex; justify-content: center; align-items: center;
+            opacity: 0; pointer-events: none; transition: var(--transition);
+        }
+        .modal-overlay.open { opacity: 1; pointer-events: all; }
+        .modal-content {
+            background: var(--white); padding: 30px; border-radius: var(--radius);
+            max-width: 90%; position: relative; transform: scale(0.8);
+            transition: var(--transition);
+        }
+        .modal-overlay.open .modal-content { transform: scale(1); }
+        .close-modal {
+            position: absolute; top: 15px; right: 15px; background: #eee;
+            border: none; width: 30px; height: 30px; border-radius: 50%; cursor: pointer;
+        }
+
+        /* Modals Específicos */
+        .video-modal { background: black; padding: 0; width: 80%; max-width: 800px; aspect-ratio: 16/9; }
+        .video-wrapper iframe, .video-wrapper video { width: 100%; height: 100%; border: none; }
+        
+        .gallery-modal { background: transparent; box-shadow: none; width: 100%; max-width: 100%; padding: 0; display: flex; flex-direction: column; align-items: center; }
+        .gallery-nav {
+            position: absolute; top: 50%; transform: translateY(-50%);
+            background: rgba(255,255,255,0.2); color: white; border: none;
+            width: 50px; height: 50px; border-radius: 50%; font-size: 2rem; cursor: pointer;
+        }
+        .nav-prev { left: 20px; } .nav-next { right: 20px; }
+        .gallery-image-container img { max-width: 100%; max-height: 80vh; border-radius: 8px; }
+        .gallery-caption { color: white; margin-top: 15px; text-align: center; font-size: 1.1rem; }
+
+        footer {
+            background: var(--white); text-align: center; padding: 20px;
+            border-top: 1px solid #eee; color: #888; margin-top: auto;
+            font-size: 0.8rem;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- NOTIFICACIONES -->
+    <div id="toast-container"></div>
+
+    <!-- PANTALLA DE LOGIN -->
+    <div id="login-screen">
+        <div class="login-card fade-in">
+            <h1>Workshop 2026</h1>
+            <p>Ingresa tu correo corporativo para acceder</p>
+            <div class="input-group">
+                <label for="email">Correo Electrónico</label>
+                <input type="email" id="email" placeholder="nombre@sunshinebouquet.com" required>
+            </div>
+            <button class="btn-login" onclick="attemptLogin()">Ingresar</button>
+        </div>
+    </div>
+
+    <!-- HEADER -->
+    <header id="main-header" class="hidden">
+        <div class="logo-area">
+            <h2>Workshop 2026</h2>
+        </div>
+        <div>
+            <span id="user-display">usuario</span>
+            <button onclick="logout()" style="margin-left:10px; padding:5px 10px;">Salir</button>
+        </div>
+    </header>
+
+    <!-- NAV (TABS) -->
+    <nav id="main-nav" class="hidden">
+        <div class="tabs-container">
+            <button class="tab-btn" onclick="switchTab('sistemas')">
+                <svg viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.488.488 0 0 0-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.484.484 0 0 0-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.04.17 0 .36.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.04-.22 0-.45-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>
+                Sistemas
+            </button>
+            <button class="tab-btn" onclick="switchTab('ambiental')">
+                <svg viewBox="0 0 24 24"><path d="M17,8C8,10,5.9,16.17,3.82,21.34L5.71,22l1-2.3A4.49,4.49,0,0,0,8,20C19,20,22,3,22,3,21,5,14,5.25,9,6.25S2,11.5,2,13.5a6.22,6.22,0,0,0,1.75,3.79,3.36,3.36,0,0,0,1.25-2.31C8,16,10,16,17,8Z"/></svg>
+                Ambiental
+            </button>
+            <button class="tab-btn" onclick="switchTab('mantenimiento')">
+                <svg viewBox="0 0 24 24"><path d="M22.7 19l-9.1-9.1c.9-2.3.4-5-1.5-6.9-2-2-5-2.4-7.4-1.3L9 6 6 9 1.6 4.7C.4 7.1.9 10.1 2.9 12.1c1.9 1.9 4.6 2.4 6.9 1.5l9.1 9.1c.4.4 1 .4 1.4 0l2.3-2.3c.5-.4.5-1.1.1-1.4z"/></svg>
+                Mantenimiento
+            </button>
+            <button class="tab-btn" onclick="switchTab('propagacion')">
+                <svg viewBox="0 0 24 24"><path d="M12 22c4.97 0 9-4.03 9-9-4.97 0-9 4.03-9 9zM5.6 10.25c0 1.38 1.12 2.5 2.5 2.5.53 0 1.01-.16 1.42-.44l-.02.19c0 1.38 1.12 2.5 2.5 2.5s2.5-1.12 2.5-2.5l-.02-.19c.4.28.89.44 1.42.44 1.38 0 2.5-1.12 2.5-2.5 0-1-.59-1.85-1.43-2.25.84-.4 1.43-1.25 1.43-2.25 0-1.38-1.12-2.5-2.5-2.5-.53 0-1.01.16-1.42.44l.02-.19C14.5 2.62 13.38 1.5 12 1.5S9.5 2.62 9.5 4l.02.19c-.4-.28-.89-.44-1.42-.44-1.38 0-2.5 1.12-2.5 2.5 0 1 .59 1.85 1.43 2.25-.84.4-1.43 1.25-1.43 2.25zM12 5.5c1.38 0 2.5 1.12 2.5 2.5s-1.12 2.5-2.5 2.5S9.5 9.38 9.5 8s1.12-2.5 2.5-2.5zM3 13c0 4.97 4.03 9 9 9 0-4.97-4.03-9-9-9z"/></svg>
+                Propagacion
+            </button>
+        </div>
+    </nav>
+
+    <main id="main-content" class="hidden">
+        
+        <!-- SISTEMAS -->
+        <section id="sistemas" class="section-content fade-in">
+            <div class="card" onclick="openVideo('https://www.w3schools.com/html/mov_bbb.mp4')"><div class="card-body"><div class="card-icon">▶️</div><h3>Video Sistemas</h3></div></div>
+            <div class="card" onclick="openArticle('sistemas')"><div class="card-body"><div class="card-icon">📄</div><h3>Artículo</h3></div></div>
+            <div class="card" onclick="openGallery('sistemas', 0)"><img src="https://picsum.photos/seed/sys1/400/300.jpg" class="card-img"><div class="card-body"><h4>Infraestructura</h4></div></div>
+            <div class="card" onclick="openGallery('sistemas', 1)"><img src="https://picsum.photos/seed/sys2/400/300.jpg" class="card-img"><div class="card-body"><h4>Servidores</h4></div></div>
+            <div class="card" onclick="openGallery('sistemas', 2)"><img src="https://picsum.photos/seed/sys3/400/300.jpg" class="card-img"><div class="card-body"><h4>Redes</h4></div></div>
+            <div class="card pdf-card"><div class="card-body"><div class="card-icon">📕</div><h3>Documentación</h3><a href="https://web.seducoahuila.gob.mx/biblioweb/upload/el%20principito.pdf" target="_blank" class="btn-download">Descargar PDF</a></div></div>
+        </section>
+
+        <!-- AMBIENTAL (CON TUS FOTOS) -->
+        <section id="ambiental" class="section-content fade-in">
+            <div class="card" onclick="openVideo('https://www.w3schools.com/html/movie.mp4')"><div class="card-body"><div class="card-icon">▶️</div><h3>Video Ambiental</h3></div></div>
+            <div class="card" onclick="openArticle('ambiental')"><div class="card-body"><div class="card-icon">🌱</div><h3>Artículo</h3></div></div>
+            <div class="card" onclick="openGallery('ambiental', 0)"><img src="https://z-cdn-media.chatglm.cn/files/6702f0ba-ef93-434e-a3aa-95739fa390ee.png?auth_key=1867021504-6ba41eb5460f41a6a3425d5034dced87-0-2324887015c1c1a2d21ecadc9ded29a3" class="card-img"><div class="card-body"><h4>Native Seeds</h4></div></div>
+            <div class="card" onclick="openGallery('ambiental', 1)"><img src="https://z-cdn-media.chatglm.cn/files/bf193318-cc53-4ca9-abc1-d6cb3fa60713.png?auth_key=1867021504-b2f17149d6ff4c3eb459ba0864e91de3-0-d935653d32d9311303d79ee15d52e943" class="card-img"><div class="card-body"><h4>Estructura Madera</h4></div></div>
+            <div class="card" onclick="openGallery('ambiental', 2)"><img src="https://z-cdn-media.chatglm.cn/files/dd87c12e-be63-4276-91ce-d38f2b0fab57.png?auth_key=1867021504-37d037290c4848d3add3bee462035335-0-cbb2f234a05b5e79b8ac63fc0b191d5f" class="card-img"><div class="card-body"><h4>Circular Ecológico</h4></div></div>
+            <div class="card pdf-card"><div class="card-body"><div class="card-icon">📊</div><h3>Reporte</h3><button class="btn-download" onclick="showToast('Descarga simulada')">Descargar PDF</button></div></div>
+        </section>
+
+        <!-- MANTENIMIENTO -->
+        <section id="mantenimiento" class="section-content fade-in">
+            <div class="card" onclick="openVideo('https://www.w3schools.com/html/mov_bbb.mp4')"><div class="card-body"><div class="card-icon">🔧</div><h3>Video Guía</h3></div></div>
+            <div class="card" onclick="openArticle('mantenimiento')"><div class="card-body"><div class="card-icon">🛠️</div><h3>Checklist</h3></div></div>
+            <div class="card" onclick="openGallery('mantenimiento', 0)"><img src="https://picsum.photos/seed/mant1/400/300.jpg" class="card-img"><div class="card-body"><h4>Herramientas</h4></div></div>
+            <div class="card" onclick="openGallery('mantenimiento', 1)"><img src="https://picsum.photos/seed/mant2/400/300.jpg" class="card-img"><div class="card-body"><h4>Repuestos</h4></div></div>
+            <div class="card" onclick="openGallery('mantenimiento', 2)"><img src="https://picsum.photos/seed/mant3/400/300.jpg" class="card-img"><div class="card-body"><h4>Equipo</h4></div></div>
+            <div class="card pdf-card"><div class="card-body"><div class="card-icon">📝</div><h3>Bitácora</h3><button class="btn-download" onclick="showToast('Descarga simulada')">Descargar PDF</button></div></div>
+        </section>
+
+        <!-- PROPAGACION -->
+        <section id="propagacion" class="section-content fade-in">
+            <div class="card" onclick="openVideo('https://www.w3schools.com/html/movie.mp4')"><div class="card-body"><div class="card-icon">🌻</div><h3>Video Siembra</h3></div></div>
+            <div class="card" onclick="openArticle('propagacion')"><div class="card-body"><div class="card-icon">🌾</div><h3>Especies</h3></div></div>
+            <div class="card" onclick="openGallery('propagacion', 0)"><img src="https://picsum.photos/seed/prop1/400/300.jpg" class="card-img"><div class="card-body"><h4>Invernadero</h4></div></div>
+            <div class="card" onclick="openGallery('propagacion', 1)"><img src="https://picsum.photos/seed/prop2/400/300.jpg" class="card-img"><div class="card-body"><h4>Esquejes</h4></div></div>
+            <div class="card" onclick="openGallery('propagacion', 2)"><img src="https://picsum.photos/seed/prop3/400/300.jpg" class="card-img"><div class="card-body"><h4>Germinación</h4></div></div>
+            <div class="card pdf-card"><div class="card-body"><div class="card-icon">📚</div><h3>Catálogo</h3><button class="btn-download" onclick="showToast('Descarga simulada')">Descargar PDF</button></div></div>
+        </section>
+    </main>
+
+    <!-- FOOTER (Muestra la URL actual para pruebas) -->
+    <footer id="main-footer" class="hidden">
+        <p>URL actual para QR: <span id="current-url-display" style="font-weight:bold; color:var(--magenta)"></span></p>
+        <p>&copy; 2026 Workshop - Sunshine Bouquet</p>
+    </footer>
+
+    <!-- MODALES -->
+    <div id="video-modal" class="modal-overlay" onclick="closeModals(event)">
+        <div class="modal-content video-modal" onclick="event.stopPropagation()">
+            <button class="close-modal" onclick="closeModals()">×</button>
+            <div class="video-wrapper" id="video-container"></div>
+        </div>
+    </div>
+    <div id="article-modal" class="modal-overlay" onclick="closeModals(event)">
+        <div class="modal-content" onclick="event.stopPropagation()" style="width: 700px;">
+            <button class="close-modal" onclick="closeModals()">×</button>
+            <h2 id="article-title" style="color:var(--magenta)">Título</h2>
+            <p id="article-text" style="margin-top:15px; line-height:1.6;">Contenido...</p>
+        </div>
+    </div>
+    <div id="gallery-modal" class="modal-overlay" onclick="closeModals(event)">
+        <div class="modal-content gallery-modal" onclick="event.stopPropagation()">
+            <button class="close-modal" onclick="closeModals()" style="background:rgba(0,0,0,0.5); color:white;">×</button>
+            <button class="gallery-nav nav-prev" onclick="changeImage(-1)">&#10094;</button>
+            <div class="gallery-image-container"><img id="gallery-img" src=""></div>
+            <button class="gallery-nav nav-next" onclick="changeImage(1)">&#10095;</button>
+            <div id="gallery-caption" class="gallery-caption"></div>
+        </div>
+    </div>
+
+    <script>
+        // --- DATOS ---
+        const galleries = {
+            ambiental: [
+                { src: 'https://z-cdn-media.chatglm.cn/files/6702f0ba-ef93-434e-a3aa-95739fa390ee.png?auth_key=1867021504-6ba41eb5460f41a6a3425d5034dced87-0-2324887015c1c1a2d21ecadc9ded29a3', caption: 'Exhibición "Native Seeds"' },
+                { src: 'https://z-cdn-media.chatglm.cn/files/bf193318-cc53-4ca9-abc1-d6cb3fa60713.png?auth_key=1867021504-b2f17149d6ff4c3eb459ba0864e91de3-0-d935653d32d9311303d79ee15d52e943', caption: 'Estructura Octagonal de Madera' },
+                { src: 'https://z-cdn-media.chatglm.cn/files/dd87c12e-be63-4276-91ce-d38f2b0fab57.png?auth_key=1867021504-37d037290c4848d3add3bee462035335-0-cbb2f234a05b5e79b8ac63fc0b191d5f', caption: 'Dispositivo Ecológico Circular' }
+            ],
+            sistemas: [{ src: 'https://picsum.photos/seed/sys1/800/600.jpg', caption: 'Infraestructura' }, { src: 'https://picsum.photos/seed/sys2/800/600.jpg', caption: 'Servidores' }, { src: 'https://picsum.photos/seed/sys3/800/600.jpg', caption: 'Redes' }],
+            mantenimiento: [{ src: 'https://picsum.photos/seed/mant1/800/600.jpg', caption: 'Herramientas' }, { src: 'https://picsum.photos/seed/mant2/800/600.jpg', caption: 'Repuestos' }, { src: 'https://picsum.photos/seed/mant3/800/600.jpg', caption: 'Equipo' }],
+            propagacion: [{ src: 'https://picsum.photos/seed/prop1/800/600.jpg', caption: 'Invernadero' }, { src: 'https://picsum.photos/seed/prop2/800/600.jpg', caption: 'Esquejes' }, { src: 'https://picsum.photos/seed/prop3/800/600.jpg', caption: 'Germinación' }]
+        };
+
+        const articles = {
+            sistemas: { title: 'Innovación en Sistemas', text: 'Integración de IA para optimizar recursos.' },
+            ambiental: { title: 'Compromiso Verde', text: 'Exhibiciones de semillas y polinización.' },
+            mantenimiento: { title: 'Protocolos Actualizados', text: 'Estandarización de procesos.' },
+            propagacion: { title: 'Futuro Floral', text: 'Nuevas especies híbridas.' }
+        };
+
+        let currentGallery = ''; let currentIndex = 0;
+
+        // --- NAVEGACIÓN POR HASH (URL) ---
+        function handleHashChange() {
+            // Obtener el hash (ej: #sistemas) y limpiar el símbolo #
+            let hash = window.location.hash.substring(1);
+            
+            // Si no hay hash, por defecto ir a 'sistemas'
+            if (!hash) hash = 'sistemas';
+
+            // Validar que sea un tab válido
+            const validTabs = ['sistemas', 'ambiental', 'mantenimiento', 'propagacion'];
+            if (!validTabs.includes(hash)) hash = 'sistemas';
+
+            // Actualizar UI de Botones
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('active');
+                if (btn.getAttribute('onclick').includes(hash)) btn.classList.add('active');
+            });
+
+            // Actualizar UI de Secciones
+            document.querySelectorAll('.section-content').forEach(sec => sec.classList.remove('active'));
+            document.getElementById(hash).classList.add('active');
+
+            // Actualizar texto en el footer
+            document.getElementById('current-url-display').textContent = window.location.href;
+        }
+
+        function switchTab(tabName) {
+            // CAMBIO DE URL AQUÍ
+            window.location.hash = tabName;
+        }
+
+        // Evento que detecta cambios en la URL
+        window.addEventListener('hashchange', handleHashChange);
+        // Evento al cargar la página
+        window.addEventListener('load', () => {
+            checkAuth();
+            handleHashChange(); // Inicializa la vista correcta según URL
+        });
+
+        // --- LOGIN & AUTENTICACIÓN ---
+        function checkAuth() {
+            const user = localStorage.getItem('workshop_user');
+            if (user) {
+                // Ocultar login, mostrar app
+                document.getElementById('login-screen').classList.add('hidden');
+                document.getElementById('main-header').classList.remove('hidden');
+                document.getElementById('main-nav').classList.remove('hidden');
+                document.getElementById('main-content').classList.remove('hidden');
+                document.getElementById('main-footer').classList.remove('hidden');
+                document.getElementById('user-display').textContent = user;
+            }
+        }
+
+        function attemptLogin() {
+            const email = document.getElementById('email').value.trim().toLowerCase();
+            if (email.endsWith('@sunshinebouquet.com')) {
+                localStorage.setItem('workshop_user', email);
+                checkAuth();
+                showToast('Acceso concedido');
+                // Al hacer login, leer el hash actual y cambiar a esa pestaña
+                handleHashChange();
+            } else {
+                showToast('Solo correos @sunshinebouquet.com');
+            }
+        }
+
+        function logout() {
+            localStorage.removeItem('workshop_user');
+            location.reload();
+        }
+
+        // --- FUNCIONES MODALES ---
+        function openVideo(url) {
+            document.getElementById('video-container').innerHTML = `<video controls autoplay><source src="${url}" type="video/mp4">Error</video>`;
+            document.getElementById('video-modal').classList.add('open');
+        }
+        function openArticle(section) {
+            const data = articles[section];
+            document.getElementById('article-title').textContent = data.title;
+            document.getElementById('article-text').textContent = data.text;
+            document.getElementById('article-modal').classList.add('open');
+        }
+        function openGallery(section, index) {
+            currentGallery = section; currentIndex = index;
+            updateGallery();
+            document.getElementById('gallery-modal').classList.add('open');
+        }
+        function updateGallery() {
+            const img = galleries[currentGallery][currentIndex];
+            document.getElementById('gallery-img').src = img.src;
+            document.getElementById('gallery-caption').textContent = img.caption;
+        }
+        function changeImage(dir) {
+            const count = galleries[currentGallery].length;
+            currentIndex = (currentIndex + dir + count) % count;
+            updateGallery();
+        }
+        function closeModals(e) {
+            if(!e || e.target.classList.contains('modal-overlay')) {
+                document.querySelectorAll('.modal-overlay').forEach(m => m.classList.remove('open'));
+                document.getElementById('video-container').innerHTML = '';
+            }
+        }
+        function showToast(msg) {
+            const t = document.createElement('div');
+            t.className = 'toast'; t.textContent = msg;
+            document.getElementById('toast-container').appendChild(t);
+            setTimeout(() => t.remove(), 3000);
+        }
+    </script>
+</body>
+</html>
